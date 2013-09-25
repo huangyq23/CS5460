@@ -15,7 +15,7 @@ typedef struct result_t
     float sub_result;
 } result_t;
 
-void **create_work(int argc, char **argv)
+mw_work *create_work(int argc, char **argv)
 {
     int order = atoi(argv[1]);
     printf("order = %d\n", order);
@@ -28,6 +28,9 @@ void **create_work(int argc, char **argv)
         vector2[i] = 1;
     }
     int work_c = order / 10; //require order to be whole product of 10
+    mw_works * works_list = malloc(sizeof(mw_works));
+    
+
     work_t **works =  (work_t **)malloc(sizeof(void *) * (work_c + 1));
     for (int i = 0; i < work_c; i++)
     {
@@ -37,6 +40,8 @@ void **create_work(int argc, char **argv)
         *(works + i) = w;
     }
     *(works + work_c) = NULL;
+
+
     return (void **)works;
 }
 

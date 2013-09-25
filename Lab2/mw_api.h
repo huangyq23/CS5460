@@ -8,7 +8,7 @@ typedef struct mw_api_work_list mw_works;
 
 struct mw_api_spec
 {
-    struct mw_api_work_list(*create) (int argc, char **argv);
+    mw_works *(*create) (int argc, char **argv);
     /* create work: return a NULL-terminated list of work. Return NULL if it fails. */
 
     int (*result) (int sz, void *res);

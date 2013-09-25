@@ -8,6 +8,10 @@
 #define TAG_WORK 1
 #define TAG_RESULT 1
 
+static void master(int argc, char **argv, struct mw_api_spec *f);
+static void worker(int argc, char **argv, struct mw_api_spec *f);
+
+
 
 void MW_Run (int argc, char **argv, struct mw_api_spec *f)
 {
@@ -16,16 +20,15 @@ void MW_Run (int argc, char **argv, struct mw_api_spec *f)
 
     if (myid == 0)
     {
-        master(int argc, char **argv, f);
+        master(argc, argv, f);
     }
     else
     {
-        worker(int argc, char **argv, f);
+        worker(argc, argv, f);
     }
 
 
     MPI_Finalize();
-    return 0;
 }
 
 static void master(int argc, char **argv, struct mw_api_spec *f)
@@ -33,16 +36,18 @@ static void master(int argc, char **argv, struct mw_api_spec *f)
     MPI_Status status;
     int size;
     MPI_Comm_size(MPI_COMM_WORLD, &size);
-    mw_works work_list = f->create(argc, argv);
+    mw_works* work_list = f->create(argc, argv);
     void *work = work_list->works;
 
-    void *results = malloc(res_sz * work_list->size);
+    void *results = malloc(f->res_sz * work_list->size);
+
+    void *result = results;
 
     int rank = 0;
     //Send out new works
     for (rank = 1; rank < size; rank++)
     {
-        MPI_Send(*work,
+        MPI_Send(work,
                  f->work_sz,
                  MPI_BYTE,
                  rank,
@@ -53,14 +58,15 @@ static void master(int argc, char **argv, struct mw_api_spec *f)
     //If there are new works, recieve the result and assign new work
     while (work != NULL)
     {
-        MPI_Recv(resp,
+        MPI_Recv(result,
                  f->res_sz,
                  MPI_BYTE,
                  MPI_ANY_SOURCE,
                  TAG_RESULT,
                  MPI_COMM_WORLD,
                  &status);
-        MPI_Send(*work,
+        result = ((char*)result)+f->res_sz;
+        MPI_Send(work,
                  f->work_sz,
                  MPI_BYTE,
                  rank,
@@ -71,13 +77,14 @@ static void master(int argc, char **argv, struct mw_api_spec *f)
     //Recieve all works
     for (rank = 1; rank < size; rank++)
     {
-        MPI_Recv(resp,
+        MPI_Recv(result,
                  f->res_sz,
                  MPI_BYTE,
                  MPI_ANY_SOURCE,
                  TAG_RESULT,
                  MPI_COMM_WORLD,
                  &status);
+        result = ((char*)result)+f->res_sz;
     }
     //Terminate all workers
     for (rank = 1; rank < size; rank++)
