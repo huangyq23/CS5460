@@ -1,8 +1,8 @@
-#include<stdlib.h>
-#include<mpi.h>
-#include<mw_api.h>
-#include<string.h>
-#include<stdio.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <mpi.h>
+#include <mw_api.h>
+#include <string.h>
 //test use case for a simple dot product work.
 typedef struct work_t
 {
@@ -15,50 +15,59 @@ typedef struct result_t
     float sub_result;
 } result_t;
 
-mw_work *create_work(int argc, char **argv)
+void generate_vector(int order, float vector[])
+{
+    int i;
+    for (i = 0; i < order; i++)
+    {
+        vector[i] =  drand48();
+    }
+}
+
+mw_works *create_work(int argc, char **argv)
 {
     int order = atoi(argv[1]);
     printf("order = %d\n", order);
     fflush(stdout);
     float *vector1 = (float *)malloc(sizeof(float) * order);
     float *vector2 = (float *)malloc(sizeof(float) * order);
-    for (int i = 0; i < order; i++)
+
+    srand48(42); //Initialize a fixed seed for vector generation.
+    generate_vector(order, vector1);
+    generate_vector(order, vector2);
+
+    int work_count = order / 10; //require order to be whole product of 10
+    mw_works *works_list = malloc(sizeof(mw_works));
+    works_list->size = work_count;
+
+    work_t *works =  (work_t *)malloc(sizeof(work_t) * work_count);
+    work_t *work = works;
+    for (int i = 0; i < work_count; i++)
     {
-        vector1[i] = 1;
-        vector2[i] = 1;
+        memcpy(work->vector1, vector1 + 10 * i, 10 * sizeof(float));
+        memcpy(work->vector2, vector2 + 10 * i, 10 * sizeof(float));
+        work++;
     }
-    int work_c = order / 10; //require order to be whole product of 10
-    mw_works * works_list = malloc(sizeof(mw_works));
-    
 
-    work_t **works =  (work_t **)malloc(sizeof(void *) * (work_c + 1));
-    for (int i = 0; i < work_c; i++)
-    {
-        work_t *w = (work_t *)malloc(sizeof(work_t));
-        memcpy(w->vector1, vector1 + 10 * i, 10 * sizeof(float));
-        memcpy(w->vector2, vector2 + 10 * i, 10 * sizeof(float));
-        *(works + i) = w;
-    }
-    *(works + work_c) = NULL;
+    works_list->works = works;
 
-
-    return (void **)works;
+    return works_list;
 }
 
-char *do_work(char *work)
+void *do_work(void *w)
 {
-    work_t *awork = (work_t *) work;
+    work_t *work = (work_t *) w;
     //print the received work
     printf("[");
     for (int i = 0; i < 10; i++)
     {
-        printf(" %f ", awork->vector1[i]);
+        printf(" %f ", work->vector1[i]);
     }
     printf("]\n");
     printf("[");
     for (int i = 0; i < 10; i++)
     {
-        printf(" %f ", awork->vector2[i]);
+        printf(" %f ", work->vector2[i]);
     }
     printf("]\n");
 
@@ -66,14 +75,14 @@ char *do_work(char *work)
     result->sub_result = 0;
     for (int i = 0; i < 10; i++)
     {
-        result->sub_result += (awork->vector1[i]) * (awork->vector2[i]);
+        result->sub_result += (work->vector1[i]) * (work->vector2[i]);
     }
     //print the local result
     printf("local result %f\n", result->sub_result);
-    return (char *)result;
+    return (void *)result;
 }
 
-int process_results(int sz, char *res)
+int process_results(int sz, void *res)
 {
     result_t *result = (result_t *)res;
     float fi_res = 0;
@@ -102,8 +111,6 @@ int main (int argc, char **argv)
     f.res_sz = sizeof (struct result_t);
 
     MW_Run (argc, argv, &f);
-
-    MPI_Finalize ();
 
     return 0;
 
