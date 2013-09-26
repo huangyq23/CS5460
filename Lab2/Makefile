@@ -1,5 +1,5 @@
 CC=mpicc
-CFLAGS=-I. -L. -std=c99
+CFLAGS=-I. -L. -std=gnu99
 OBJ = mw_api.o test.o 
 
 %.o: %.c
