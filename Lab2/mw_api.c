@@ -8,10 +8,10 @@
 #define TAG_WORK 1
 #define TAG_RESULT 1
 
-static void master(int argc, char **argv, struct mw_api_spec *f);
-static void worker(int argc, char **argv, struct mw_api_spec *f);
+static void master(int argc, char **argv, mw_api_spec *f);
+static void worker(int argc, char **argv, mw_api_spec *f);
 
-void MW_Run (int argc, char **argv, struct mw_api_spec *f)
+void MW_Run (int argc, char **argv, mw_api_spec *f)
 {
     int myid;
     MPI_Comm_rank(MPI_COMM_WORLD, &myid);
@@ -27,15 +27,20 @@ void MW_Run (int argc, char **argv, struct mw_api_spec *f)
     MPI_Finalize();
 }
 
-static void master(int argc, char **argv, struct mw_api_spec *f)
+static void master(int argc, char **argv, mw_api_spec *f)
 {
     MPI_Status status;
     int size;
     MPI_Comm_size(MPI_COMM_WORLD, &size);
-    mw_works* work_list = f->create(argc, argv);
+
+    void *meta = malloc(f->meta_sz);
+
+    mw_works *work_list = f->create(argc, argv, meta);
     void *work = work_list->works;
 
     void *results = malloc(f->res_sz * work_list->size);
+
+
 
     void *result = results;
 
@@ -52,11 +57,11 @@ static void master(int argc, char **argv, struct mw_api_spec *f)
                  rank,
                  TAG_WORK,
                  MPI_COMM_WORLD);
-        work = ((char*)work)+f->work_sz;
+        work = ((char *)work) + f->work_sz;
         work_count--;
     }
     //If there are new works, recieve the result and assign new work
-    while (work_count >0)
+    while (work_count > 0)
     {
         MPI_Recv(result,
                  f->res_sz,
@@ -65,7 +70,7 @@ static void master(int argc, char **argv, struct mw_api_spec *f)
                  TAG_RESULT,
                  MPI_COMM_WORLD,
                  &status);
-        result = ((char*)result)+f->res_sz;
+        result = ((char *)result) + f->res_sz;
         result_count++;
         MPI_Send(work,
                  f->work_sz,
@@ -73,7 +78,7 @@ static void master(int argc, char **argv, struct mw_api_spec *f)
                  status.MPI_SOURCE,
                  TAG_WORK,
                  MPI_COMM_WORLD);
-        work = ((char*)work)+f->work_sz;
+        work = ((char *)work) + f->work_sz;
         work_count--;
     }
     //Recieve all works
@@ -86,7 +91,7 @@ static void master(int argc, char **argv, struct mw_api_spec *f)
                  TAG_RESULT,
                  MPI_COMM_WORLD,
                  &status);
-        result = ((char*)result)+f->res_sz;
+        result = ((char *)result) + f->res_sz;
         result_count++;
     }
     //Terminate all workers
@@ -100,11 +105,11 @@ static void master(int argc, char **argv, struct mw_api_spec *f)
                  MPI_COMM_WORLD);
     }
 
-    f->result(result_count, results);
+    f->result(result_count, results, meta);
     free(results);
 }
 
-static void worker(int argc, char **argv, struct mw_api_spec *f)
+static void worker(int argc, char **argv, mw_api_spec *f)
 {
     MPI_Status status;
     char *work = malloc(f->work_sz);

@@ -24,7 +24,7 @@ void generate_vector(int order, float vector[])
     }
 }
 
-mw_works *create_work(int argc, char **argv)
+mw_works *create_work(int argc, char **argv, void *meta)
 {
     int order = atoi(argv[1]);
     printf("order = %d\n", order);
@@ -82,7 +82,7 @@ void *do_work(void *w)
     return (void *)result;
 }
 
-int process_results(int sz, void *res)
+int process_results(int sz, void *res, void *meta)
 {
     result_t *result = (result_t *)res;
     float fi_res = 0;
