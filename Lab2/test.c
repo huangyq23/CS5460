@@ -109,6 +109,7 @@ int main (int argc, char **argv)
     f.compute = do_work;
     f.work_sz = sizeof (struct work_t);
     f.res_sz = sizeof (struct result_t);
+    f.meta_sz = 0;
 
     MW_Run (argc, argv, &f);
 

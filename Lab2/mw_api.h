@@ -1,6 +1,6 @@
 struct mw_works
 {
-    int size
+    int size;
     void *works;
 };
 

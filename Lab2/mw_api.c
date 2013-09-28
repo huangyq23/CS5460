@@ -1,8 +1,8 @@
-#include<stdlib.h>
-#include<stdio.h>
-#include<mw_api.h>
-#include<mpi.h>
-#include<string.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <mw_api.h>
+#include <mpi.h>
+#include <string.h>
 
 #define TAG_TERM 0
 #define TAG_WORK 1
@@ -34,7 +34,6 @@ static void master(int argc, char **argv, mw_api_spec *f)
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
     void *meta = malloc(f->meta_sz);
-
     mw_works *work_list = f->create(argc, argv, meta);
     void *work = work_list->works;
 
