@@ -1,10 +1,11 @@
 #include <stdio.h>
+#include <time.h>
 #include <stdlib.h>
 #include <mpi.h>
 #include <mw_api.h>
 #include <string.h>
 #define PATBUFSZ 64 //THe query string buffer size.
-#define CHUNKSZ 4096*4 //The chunck size for worker data
+#define CHUNKSZ 4096*4*2*64 //The chunck size for worker data
 //test use case for a simple dot product work.
 typedef struct kmf_work_t
 {
@@ -19,11 +20,17 @@ typedef struct kmf_result_t
     long hits; //number of hits for the query string in a chuck
 } result_t;
 
+typedef struct time_stp
+{
+    double time;
+} time_stp;
+
 mw_works *create_work(int argc, char **argv, void *meta)
 {
     char *f = argv[1];
     char *pat = argv[2];
     int patlen = strlen(argv[2]);
+    time_stp* tstp = (time_stp*) meta;
     if (patlen > PATBUFSZ - 1)
     {
         printf("Size of the query string must be smaller than the buffer size %d!\n", PATBUFSZ);
@@ -47,6 +54,7 @@ mw_works *create_work(int argc, char **argv, void *meta)
     if ( 1 != fread( buffer , lSize, 1 , fp) )
         fclose(fp), free(buffer), fputs("entire read fails", stderr), exit(1);
     printf("The file %s has been loaded into the RAM, the size of the file is %ld\n", f, lSize);
+    //finish file reading, timestamp current time
     //count the number of works
     int work_c = lSize / (CHUNKSZ - patlen + 1);
     int extra = lSize - work_c * (CHUNKSZ - patlen + 1);
@@ -76,6 +84,7 @@ mw_works *create_work(int argc, char **argv, void *meta)
         memcpy(workArr[i].pat, pat, patlen);
         //if(i<work_c )printf("The (%d) work:\n query:\n%s\n chun:\n%s\n",i, workArr[i].pat, workArr[i].chunk);
     }
+    tstp->time = MPI_Wtime();
     return works;
 }
 
@@ -153,7 +162,7 @@ void *run_kmp(void *w)
     //printf("received query:\n %s", query);
     result_t *result = (result_t *)malloc(sizeof(result_t));
     result->hits = kmp_search(strlen(query), CHUNKSZ, query, target);
-    printf("local hits : %ld\n", result->hits);
+    //printf("local hits : %ld\n", result->hits);
     return (void *) result;
 }
 
@@ -161,14 +170,18 @@ int process_results(int sz, void *res, void* meta)
 {
     result_t *result = (result_t *)res;
     long fi_res = 0;
+    time_stp* tstp = (time_stp*) meta;
     for (int i = 0; i < sz; i++)
     {
         //print the received local result
-        printf("received local result %ld\n", result->hits);
+        //printf("received local result %ld\n", result->hits);
         fi_res += result->hits;
         result++;
     }
-    printf("The total number of hits is %ld\n", fi_res);
+    //printf("The total number of hits is %ld\n", fi_res);
+    double diff = MPI_Wtime() - tstp->time;
+
+    printf("Time taken %f seconds\n",diff );
     return 1;
 }
 
@@ -183,7 +196,7 @@ int main (int argc, char **argv)
     f.compute = run_kmp;
     f.work_sz = sizeof (work_t);
     f.res_sz = sizeof (result_t);
-    f.meta_sz = 0;
+    f.meta_sz = sizeof(time_stp);
 
     MW_Run (argc, argv, &f);
 

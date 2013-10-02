@@ -22,6 +22,7 @@ typedef struct result_t
 typedef struct meta_t
 {
     mpz_t target;
+    double start_time;
 } meta_t;
 
 mw_works *create_work(int argc, char **argv, void *metaPtr)
@@ -38,14 +39,14 @@ mw_works *create_work(int argc, char **argv, void *metaPtr)
 
     mpz_init_set(meta->target, target);
 
-    gmp_printf ("%Zd\n",  target);
-    gmp_printf ("%Zd\n",  range);
+    //gmp_printf ("%Zd\n",  target);
+    //gmp_printf ("%Zd\n",  range);
 
     mpz_sqrt(target_root, target);
 
     //mpz_get_str(meta->target, 10, target);
 
-    gmp_printf ("%Zd\n\n",  target_root);
+    //gmp_printf ("%Zd\n\n",  target_root);
 
     mpz_cdiv_q(work_count_long, target_root, range);
 
@@ -72,7 +73,7 @@ mw_works *create_work(int argc, char **argv, void *metaPtr)
     }
 
     works_list->works = works;
-
+    meta->start_time = MPI_Wtime();
     return works_list;
 }
 
@@ -120,19 +121,24 @@ int process_results(int sz, void *res, void *metaPtr)
 
     //gmp_printf ("%s\n",  result->divisor);
     //printf ("xx: %s\n",  result->divisor);
-    for (int i = 0; i < sz; i++)
-    {
-        mpz_init_set_str (divisor, result->divisor, 10);
-        for (int j = 0; j < result->offsets_num; j++)
-        {
-            mpz_add_ui (factor, divisor, result->offsets[j]);
-            mpz_cdiv_q(factor2, meta->target, factor);
-            //gmp_printf ("%Zd\n",  meta->target);
-            gmp_printf ("%Zd\n",  factor);
-            gmp_printf ("%Zd\n",  factor2);
-        }
-        result++;
-    }
+    double elapsed_time = MPI_Wtime() - meta->start_time;
+
+
+    printf("%.10f", elapsed_time);
+
+    // for (int i = 0; i < sz; i++)
+    // {
+    //     mpz_init_set_str (divisor, result->divisor, 10);
+    //     for (int j = 0; j < result->offsets_num; j++)
+    //     {
+    //         mpz_add_ui (factor, divisor, result->offsets[j]);
+    //         mpz_cdiv_q(factor2, meta->target, factor);
+    //         //gmp_printf ("%Zd\n",  meta->target);
+    //         //gmp_printf ("%Zd\n",  factor);
+    //         //gmp_printf ("%Zd\n",  factor2);
+    //     }
+    //     result++;
+    // }
     return 1;
 }
 
