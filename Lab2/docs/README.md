@@ -1,8 +1,71 @@
-# Master-Worker API
+# Master Worker API
+October 1, 2013
 
-## Getting Started
+Chen Cao, Yiqiu Huang
 
-## API Reference
+##Part 1
+In this part, we implemented an API to achieve Master-Worker parallelism.
+
+The API is exposes three user-defined struct and three user-defined functions.
+
+### API Specification
+
+#### User-defined Data Structures
+*	`work`: encapsulates a single unit of work to be done by a worker.
+*	`result`: represent the result of work returned by the worker.
+*	`meta`: (**Optional**) a general-purpose data structure that will pass to and consistent during `create` and `result` function calls.
+
+
+####  User-defined Functions
+*	`create`: return a list of works to be done. 
+*	`compute`: takes a signle work and returns a result
+*	`result`: take the list of results sent back from the workers and optionally combine them to get the actual result of the computation.
+
+#### Entry Point
+There should be a function to invoked by user to start the master worker configuration.
+
+### API Implementation
+
+API Reference of our implementation can be found at the [API Reference](#API_Reference) Section.
+
+######Related Files
+*	mw_api.h
+*	mw_api.c
+
+### API Testing
+
+We migrated our dot product program from the previous lab to utilize the new API.
+
+######Related Files
+*	test.c
+
+## Part2
+In this part, we experimented with different grainularity, work number settings. The result is plotted below.
+
+![Alt Part 2 plot](p2_plot.png)
+
+From the result, we can see that the perfomance boost we gain from adding workers is decreasing. The boost became almost indistinguishable once we reached 10 workers. The granularity is no longer signifcant after we hit 1000 division per worker.
+
+######Related Files
+*	largeintdiv.c
+
+## Part3
+
+The problem we are trying to solve is the string searching problem in a large file.
+
+Human DNA whole genome sequencing is now become affordable to common people, to efficiently identify a signature DNA sequence from whole genome is very useful in personalized medicine and biomedical research. 
+
+We implemented KMP algorithm on worker.
+
+We exprimented with various worker numbers and found its performance saturated at about 9 workers. (which is consistent with out previous result). Further increasing of worker numbers only improve the performance marginally.
+
+![Alt text](p3_plot.png)
+
+######Related Files
+*	parallel_kmp.c
+
+
+## [API Reference](id:API_Reference)
 
 ### Functions
 #### [MW_Run](id:MW_Run)
@@ -75,7 +138,7 @@ The `meta` is the user defined meta data struct that will persist across [`mw_cr
  -----|------|------- 
  argc | int | Command-line arguments 
  argv | char ** | Command-line arguments 
- meta | void * | User-defined metadat
+ meta | void * | User-defined metadata
 
 ##### Return
  Type | Value 
@@ -109,3 +172,4 @@ void* compute(void *work);
  Type | Value 
  ----|------- 
  void * | Computed result, `NULL` if there is no result.
+ 
